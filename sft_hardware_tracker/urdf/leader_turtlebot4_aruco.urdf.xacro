@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<robot name="leader_turtlebot4_aruco" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:arg name="gazebo" default="ignition"/>
+
+  <xacro:include filename="$(find nav2_minimal_tb4_description)/urdf/standard/turtlebot4.urdf.xacro"/>
+  <xacro:include filename="$(find sft_hardware_tracker)/urdf/sft_aruco_board_visual.xacro"/>
+
+  <link name="aruco_board_link">
+    <xacro:sft_aruco_board_visuals/>
+    <collision name="sft_aruco_board_collision">
+      <origin xyz="0 0 -0.002" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.30 0.30 0.004"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0 0 -0.002"/>
+      <mass value="0.02"/>
+      <inertia ixx="0.00004" ixy="0.0" ixz="0.0" iyy="0.00004" iyz="0.0" izz="0.00008"/>
+    </inertial>
+  </link>
+
+  <joint name="aruco_board_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="aruco_board_link"/>
+    <origin xyz="-0.225 0 0.25" rpy="0 -1.57079632679 0"/>
+  </joint>
+</robot>

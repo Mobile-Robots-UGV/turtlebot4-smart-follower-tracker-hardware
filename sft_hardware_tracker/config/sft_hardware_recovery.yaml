@@ -1,0 +1,56 @@
+board_tracker_node:
+  ros__parameters:
+    board_pose_topic: /robot_09/board_pose
+    board_visible_topic: /robot_09/board_visible
+    tracked_pose_topic: /robot_09/tracked_board_pose
+    status_topic: /robot_09/tracker_status
+    predicted_path_topic: /robot_09/predicted_board_path
+
+    # Select estimator backend: kf or pf
+    tracker_backend: kf
+
+    # Particle filter settings. Used only when tracker_backend: pf
+    pf_num_particles: 300
+
+    # Estimator tuning
+    process_noise: 0.5
+    measurement_noise: 0.1
+
+    # Tracking state timing
+    fresh_threshold_s: 0.5
+    prediction_timeout_s: 3.0
+
+    # Predicted path rollout for debugging / visualization
+    prediction_horizon_s: 1.5
+    prediction_dt_s: 0.1
+
+    publish_rate_hz: 20.0
+
+recovery_follower_node:
+  ros__parameters:
+    tracked_pose_topic: /robot_09/tracked_board_pose
+    status_topic: /robot_09/tracker_status
+    cmd_vel_topic: /robot_09/cmd_vel
+
+    desired_distance_m: 0.70
+    min_distance_m: 0.30
+
+    kp_linear: 0.35
+    kp_angular: 0.90
+
+    max_linear_measured: 0.15
+    max_angular_measured: 0.45
+
+    # Keep predicted motion very cautious.
+    max_linear_predicted: 0.02
+    max_angular_predicted: 0.12
+
+    # Must be close to or greater than prediction_timeout_s,
+    # otherwise follower may stop before tracker finishes prediction.
+    pose_timeout_s: 3.0
+    publish_rate_hz: 20.0
+
+    # LiDAR obstacle guard.
+    scan_topic: /robot_09/scan
+    front_stop_distance_m: 0.45
+    front_slow_distance_m: 0.80

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+  RC1 FIX: replaced 184 individual pixel boxes (which exhausted Intel UHD GL
+  vertex-buffer pool in RViz → "Cannot create GL vertex buffer" crash) with a
+  single textured mesh.
+
+  RViz renders one GL buffer with the ArUco texture instead of 184 separate
+  visual boxes.
+  Gazebo ogre2 overrides the material with a PBR albedo texture so the
+  simulated OAK-D camera sees real ArUco markers for board_pose detection.
+-->
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:property name="sft_pkg" value="$(find sft_hardware_tracker)"/>
+
+  <xacro:macro name="sft_aruco_board_visuals">
+    <visual name="sft_aruco_board_face">
+      <origin xyz="0 0 0.001" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="package://sft_hardware_tracker/meshes/aruco_board_textured.dae"/>
+      </geometry>
+    </visual>
+  </xacro:macro>
+
+  <!--
+    Gazebo-only material override: PBR albedo texture with the ArUco board
+    pattern so the simulated camera can detect markers.  The absolute path
+    is resolved by xacro at build time so Gazebo does not need model:// URI
+    resolution.  $(find …) resolves to the installed share directory.
+  -->
+  <gazebo reference="aruco_board_link">
+    <material>
+      <ambient>1 1 1 1</ambient>
+      <diffuse>1 1 1 1</diffuse>
+      <specular>0.0 0.0 0.0 1</specular>
+      <pbr>
+        <metal>
+          <albedo_map>${sft_pkg}/materials/textures/aruco_board.png</albedo_map>
+          <metalness>0.0</metalness>
+          <roughness>0.9</roughness>
+        </metal>
+      </pbr>
+    </material>
+  </gazebo>
+</robot>
