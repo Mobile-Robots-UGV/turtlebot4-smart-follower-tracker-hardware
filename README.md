@@ -10,6 +10,15 @@ This repository runs on a VM connected to a real TurtleBot 4 Lite. The robot pub
 
 The system detects an ArUco board in the TurtleBot 4 OAK-D camera stream, estimates the board pose, tracks the board using a selectable Kalman Filter or Particle Filter, and commands the robot to follow the board safely.
 
+| Feature                      | Status |
+| ---------------------------- | ------ |
+| ArUco detection              | Yes    |
+| KF/PF target tracking        | Yes    |
+| Short target-loss prediction | Yes    |
+| Following control            | Yes    |
+| SLAM mapping                 | Yes    |
+| LiDAR front safety stop/slow | Yes    |
+
 The tracker publishes three states:
 
 | State       | Meaning                         | Robot Behavior                                 |
@@ -363,13 +372,32 @@ RViz configuration:
 
 ```text
 Fixed Frame: map
-RobotModel: disabled
 SLAM Map: enabled
 Robot 09 Scan: enabled
 Board Debug Image: enabled
 Board Pose Markers: enabled
 Predicted Board Path: enabled
+TurtleBot 4 Model: optional
 ```
+
+To visualize the real TurtleBot 4 model in RViz, launch RViz with TF remaps because the real robot publishes TF on `/robot_09/tf` and `/robot_09/tf_static`:
+
+```bash
+rviz2 -d ~/ros2_ws/src/turtlebot4-smart-follower-tracker-hardware/sft_hardware_tracker/rviz/sft_turtlebot_hardware.rviz --ros-args \
+  -r /tf:=/robot_09/tf \
+  -r /tf_static:=/robot_09/tf_static
+```
+
+For the RobotModel display:
+
+```text
+Description Source: Topic
+Description Topic: /robot_09/robot_description
+TF Prefix: empty
+Enabled: true
+```
+
+Do not set `TF Prefix: robot_09`, because the hardware TF frame names are `odom`, `base_link`, `rplidar_link`, and camera/link names without the `robot_09/` frame prefix.
 
 ---
 
@@ -466,7 +494,7 @@ board_tracker_node:
     process_noise: 0.5
     measurement_noise: 0.1
     fresh_threshold_s: 0.5
-    prediction_timeout_s: 3.0
+    prediction_timeout_s: 10.0
     prediction_horizon_s: 1.5
     prediction_dt_s: 0.1
     publish_rate_hz: 20.0
@@ -481,7 +509,7 @@ recovery_follower_node:
     max_angular_measured: 0.45
     max_linear_predicted: 0.02
     max_angular_predicted: 0.12
-    pose_timeout_s: 3.0
+    pose_timeout_s: 15.0
     publish_rate_hz: 20.0
     scan_topic: /robot_09/scan
     front_stop_distance_m: 0.45
@@ -589,89 +617,6 @@ This saves:
 ~/sft_hardware_map.yaml
 ```
 
----
-
-## Troubleshooting
-
-### Robot does not move, but `/robot_09/cmd_vel` is publishing
-
-Check the publisher QoS:
-
-```bash
-ros2 topic info -v /robot_09/cmd_vel
-```
-
-The follower publisher must use:
-
-```text
-Reliability: BEST_EFFORT
-```
-
-Also check that commands use:
-
-```text
-frame_id: robot_09/base_link
-```
-
-### Manual `--once` velocity command does not move the robot
-
-Use a continuous stream instead:
-
-```bash
-timeout 3 ros2 topic pub --rate 10 \
-  --qos-reliability best_effort \
-  /robot_09/cmd_vel \
-  geometry_msgs/msg/TwistStamped \
-  "{header: {frame_id: robot_09/base_link}, twist: {linear: {x: 0.05}, angular: {z: 0.0}}}"
-```
-
-### SLAM does not publish `/map`
-
-Activate SLAM lifecycle:
-
-```bash
-ros2 lifecycle set /slam_toolbox configure
-ros2 lifecycle set /slam_toolbox activate
-```
-
-Confirm TF:
-
-```bash
-ros2 run tf2_ros tf2_echo odom base_link --ros-args \
-  -r /tf:=/robot_09/tf \
-  -r /tf_static:=/robot_09/tf_static
-```
-
-### RViz RobotModel is red
-
-Disable RobotModel. The hardware RViz config should use:
-
-```text
-Fixed Frame: map
-RobotModel: disabled
-```
-
-### RViz drops LaserScan messages
-
-If you see:
-
-```text
-Message Filter dropping message: frame 'rplidar_link'
-```
-
-this is usually visualization-only. The follower can still use `/robot_09/scan` for safety.
-
----
-
-## Known Limitations
-
-* The recovery prediction is target-state prediction, not global obstacle-aware planning.
-* LiDAR is used as a local front safety guard only.
-* If the board leaves the camera view for too long, the robot stops.
-* RViz RobotModel is disabled because the real robot TF tree does not use `robot_09/`-prefixed frame names.
-* SLAM requires TF remapping from `/tf` to `/robot_09/tf` and `/tf_static` to `/robot_09/tf_static`.
-
----
 
 ## Future Work
 
